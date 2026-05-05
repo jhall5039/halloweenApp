@@ -10,7 +10,7 @@
     "@azure/functions": "^4.0.0"
   },
   "devDependencies": {
-    "serve": "^14.0.0"
+    "serve": "^14.2.6"
   },
   "engines": {
     "node": ">=18"
