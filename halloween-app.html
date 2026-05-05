@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎃 Haunt Your Hood — Heritage Pointe</title>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --orange: #FF6B00;
+    --deep-orange: #CC4400;
+    --yellow: #FFD700;
+    --purple: #4A0E8F;
+    --deep-purple: #2D0857;
+    --black: #0A0A0F;
+    --dark: #12101A;
+    --card-bg: #1A1428;
+    --card-border: #3D2060;
+    --text: #F0E6FF;
+    --muted: #9B87C0;
+    --green: #00E676;
+    --red: #FF3D3D;
+    --sidebar-w: 400px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--black);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP NAV ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 60px;
+    background: var(--dark);
+    border-bottom: 1px solid var(--card-border);
+    flex-shrink: 0;
+    z-index: 1000;
+    position: relative;
+  }
+
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .topbar-brand .pumpkin { font-size: 28px; animation: float 3s ease-in-out infinite; }
+
+  @keyframes float {
+    0%,100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-6px) rotate(5deg); }
+  }
+
+  .topbar-brand h1 {
+    font-family: 'Creepster', cursive;
+    font-size: 26px;
+    color: var(--orange);
+    letter-spacing: 3px;
+    text-shadow: 0 0 12px rgba(255,107,0,0.4);
+    line-height: 1;
+  }
+
+  .topbar-brand .sub {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .topbar-stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .stat-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+  }
+
+  .stat-pill .num {
+    font-family: 'Creepster', cursive;
+    font-size: 22px;
+    color: var(--yellow);
+    text-shadow: 0 0 8px rgba(255,215,0,0.3);
+  }
+
+  .stat-pill .lbl {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+
+  .btn-add-house {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, var(--orange), var(--deep-orange));
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: 'Creepster', cursive;
+    font-size: 17px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 12px rgba(255,107,0,0.3);
+  }
+
+  .btn-add-house:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(255,107,0,0.4); }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── MAP ── */
+  #map {
+    flex: 1;
+    height: 100%;
+    z-index: 1;
+  }
+
+  /* Dark map overlay via CSS invert on tiles */
+  .leaflet-tile { filter: brightness(0.6) saturate(0.7) hue-rotate(200deg); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    height: 100%;
+    background: var(--dark);
+    border-left: 1px solid var(--card-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    z-index: 2;
+  }
+
+  .sidebar-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sidebar-title {
+    font-family: 'Creepster', cursive;
+    font-size: 20px;
+    color: var(--yellow);
+    letter-spacing: 1.5px;
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .filter-btn {
+    padding: 4px 12px;
+    border-radius: 14px;
+    border: 1.5px solid var(--card-border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+    background: rgba(255,107,0,0.1);
+  }
+
+  .house-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .house-list::-webkit-scrollbar { width: 4px; }
+  .house-list::-webkit-scrollbar-track { background: transparent; }
+  .house-list::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
+
+  .house-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    animation: slideIn 0.3s ease forwards;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .house-card:hover, .house-card.active {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 1px rgba(255,107,0,0.2), 0 4px 20px rgba(255,107,0,0.1);
+  }
+
+  .card-row1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+
+  .card-address {
+    font-weight: 900;
+    font-size: 15px;
+    color: var(--text);
+    flex: 1;
+    padding-right: 8px;
+  }
+
+  .card-name {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .card-tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(74,14,143,0.4);
+    border: 1px solid rgba(74,14,143,0.5);
+    font-size: 11px;
+    font-weight: 700;
+    color: #C8A8FF;
+  }
+
+  .card-tag.highlight {
+    background: rgba(255,107,0,0.2);
+    border-color: rgba(255,107,0,0.4);
+    color: var(--orange);
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+
+  .candy-pips {
+    display: flex;
+    gap: 3px;
+  }
+
+  .pip {
+    width: 7px; height: 7px;
+    border-radius: 2px;
+    background: var(--card-border);
+  }
+
+  .pip.on { background: var(--orange); }
+
+  .card-hours {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .delete-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--card-border);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .delete-btn:hover { color: var(--red); background: rgba(255,61,61,0.1); }
+
+  .card-notes {
+    font-size: 11px;
+    color: #7A6A9A;
+    font-style: italic;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* ── MODAL / DRAWER ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--dark);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 100%;
+    max-width: 520px;
+    position: relative;
+    transform: translateY(30px);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-overlay.open .modal {
+    transform: translateY(0);
+  }
+
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 20px 20px 0 0;
+    background: linear-gradient(90deg, var(--orange), var(--yellow), var(--orange));
+  }
+
+  .modal h2 {
+    font-family: 'Creepster', cursive;
+    font-size: 28px;
+    color: var(--yellow);
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .modal-close:hover { color: var(--text); background: var(--card-bg); }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  input, select, textarea {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+  }
+
+  select option { background: var(--dark); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .treat-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 6px;
+  }
+
+  .treat-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 16px;
+    border: 1.5px solid var(--card-border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .treat-tag:hover { border-color: var(--orange); color: var(--orange); }
+  .treat-tag.active { background: rgba(255,107,0,0.15); border-color: var(--orange); color: var(--orange); }
+
+  .map-hint {
+    background: rgba(255,107,0,0.08);
+    border: 1px solid rgba(255,107,0,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--orange);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  .btn-submit {
+    margin-top: 6px;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--orange), var(--deep-orange));
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'Creepster', cursive;
+    font-size: 20px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 16px rgba(255,107,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(255,107,0,0.4); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── MAP MARKERS ── */
+  .house-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange), var(--deep-orange));
+    border: 2px solid var(--yellow);
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(255,107,0,0.5);
+    animation: markerPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    transition: transform 0.15s;
+  }
+
+  .house-marker:hover { transform: scale(1.15); }
+
+  @keyframes markerPop {
+    from { transform: scale(0) translateY(-10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  /* ── LEAFLET POPUP ── */
+  .leaflet-popup-content-wrapper {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: 12px !important;
+    color: var(--text) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  }
+
+  .leaflet-popup-tip { background: var(--card-bg) !important; }
+
+  .popup-address { font-weight: 900; font-size: 15px; color: var(--text); margin-bottom: 4px; }
+  .popup-name { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .popup-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .popup-tag { padding: 2px 8px; border-radius: 4px; background: rgba(255,107,0,0.15); border: 1px solid rgba(255,107,0,0.3); font-size: 11px; font-weight: 700; color: var(--orange); }
+  .popup-pips { display: flex; gap: 3px; margin-bottom: 6px; }
+  .popup-pip { width: 8px; height: 8px; border-radius: 2px; background: #3D2060; }
+  .popup-pip.on { background: var(--orange); }
+  .popup-hours { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .popup-notes { font-size: 11px; color: #7A6A9A; font-style: italic; }
+
+  /* ── LOADING / ERROR STATES ── */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--black);
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    transition: opacity 0.4s;
+  }
+
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .loading-pumpkin { font-size: 60px; animation: float 1.5s ease-in-out infinite; }
+
+  .loading-text {
+    font-family: 'Creepster', cursive;
+    font-size: 24px;
+    color: var(--orange);
+    letter-spacing: 3px;
+  }
+
+  .loading-bar {
+    width: 200px;
+    height: 4px;
+    background: var(--card-border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .loading-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--orange), var(--yellow));
+    border-radius: 2px;
+    animation: loadFill 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loadFill {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--green);
+    color: #000;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-weight: 700;
+    font-size: 14px;
+    z-index: 3000;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--red); color: white; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    text-align: center;
+    gap: 10px;
+  }
+
+  .empty-state .icon { font-size: 48px; }
+  .empty-state p { font-size: 14px; font-weight: 600; }
+  .empty-state small { font-size: 12px; color: #4A3A6A; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .sidebar { width: 100%; height: 45vh; border-left: none; border-top: 1px solid var(--card-border); }
+    .main { flex-direction: column; }
+    #map { flex: none; height: 55vh; }
+    .topbar-stats { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-pumpkin">🎃</div>
+  <div class="loading-text">Summoning the spirits...</div>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+</div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span class="pumpkin">🎃</span>
+    <div>
+      <h1>Haunt Your Hood</h1>
+      <div class="sub">Heritage Pointe · Senoia, GA 30276</div>
+    </div>
+  </div>
+  <div class="topbar-stats">
+    <div class="stat-pill"><span class="num" id="statTotal">0</span><span class="lbl">Houses</span></div>
+    <div class="stat-pill"><span class="num" id="statCandy">0</span><span class="lbl">Candy</span></div>
+    <div class="stat-pill"><span class="num" id="statHaunted">0</span><span class="lbl">Haunted</span></div>
+  </div>
+  <button class="btn-add-house" onclick="openModal()">+ Add My House 🏠</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div id="map"></div>
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">🗺️ Participating Houses</div>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" onclick="setFilter('fullsize',this)">Full-Size 🍫</button>
+      <button class="filter-btn" onclick="setFilter('haunted',this)">Haunted 👻</button>
+      <button class="filter-btn" onclick="setFilter('nonfood',this)">Allergy-Safe 🩺</button>
+    </div>
+    <div class="house-list" id="houseList"></div>
+  </div>
+</div>
+
+<!-- Add House Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>🏠 Add Your House</h2>
+    <div class="map-hint">📍 Your house will appear as a pin on the neighborhood map</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Street Address *</label>
+        <input type="text" id="f-address" placeholder="e.g. 123 Heritage Pointe Pkwy" />
+      </div>
+      <div class="form-group">
+        <label>Your Name (optional)</label>
+        <input type="text" id="f-name" placeholder="e.g. The Smiths" />
+      </div>
+      <div class="form-group">
+        <label>Trick-or-Treat Hours</label>
+        <input type="text" id="f-hours" placeholder="e.g. 6–9 PM" />
+      </div>
+      <div class="form-group full">
+        <label>Candy Generosity</label>
+        <select id="f-generosity">
+          <option value="1">🍬 Single piece — don't judge us</option>
+          <option value="2">🍬🍬 A couple pieces</option>
+          <option value="3" selected>🍬🍬🍬 Handful — solid!</option>
+          <option value="4">🍬🍬🍬🍬 Very generous</option>
+          <option value="5">🍬🍬🍬🍬🍬 Full-size bars 👑</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>What are you offering?</label>
+        <div class="treat-tags" id="treatTagsInput">
+          <button class="treat-tag" data-val="candy">🍬 Candy</button>
+          <button class="treat-tag" data-val="fullsize">🍫 Full-Size Bars</button>
+          <button class="treat-tag" data-val="popcorn">🍿 Popcorn</button>
+          <button class="treat-tag" data-val="drinks">🧃 Drinks</button>
+          <button class="treat-tag" data-val="hotcocoa">☕ Hot Cocoa</button>
+          <button class="treat-tag" data-val="decorations">🕸️ Decorated</button>
+          <button class="treat-tag" data-val="haunted">👻 Haunted</button>
+          <button class="treat-tag" data-val="firepits">🔥 Fire Pit</button>
+          <button class="treat-tag" data-val="games">🎮 Games</button>
+          <button class="treat-tag" data-val="nonfood">🩺 Allergy-Safe</button>
+        </div>
+      </div>
+      <div class="form-group full">
+        <label>Notes (allergies, hours, special info)</label>
+        <textarea id="f-notes" placeholder="e.g. Nut-free candy, front porch light on means we're home..."></textarea>
+      </div>
+    </div>
+    <button class="btn-submit" id="submitBtn" onclick="submitHouse()">
+      <span>Add to the Map</span><span>🎃</span>
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  CONFIG — Update API_BASE after deploying Azure Functions
+// ─────────────────────────────────────────────
+const API_BASE = window.HALLOWEEN_API_URL || 'https://YOUR-FUNCTION-APP.azurewebsites.net/api';
+
+const TREAT_LABELS = {
+  candy:       '🍬 Candy',
+  fullsize:    '🍫 Full-Size',
+  popcorn:     '🍿 Popcorn',
+  drinks:      '🧃 Drinks',
+  hotcocoa:    '☕ Hot Cocoa',
+  decorations: '🕸️ Decorated',
+  haunted:     '👻 Haunted',
+  firepits:    '🔥 Fire Pit',
+  games:       '🎮 Games',
+  nonfood:     '🩺 Allergy-Safe'
+};
+
+// 15 Heritage Pointe Pkwy, Senoia GA 30276 — neighborhood starting point
+const NEIGHBORHOOD_CENTER = [33.3256, -84.5439];
+const NEIGHBORHOOD_ZOOM = 17;
+
+let map, houses = [], markers = {}, activeFilter = 'all', activeCardId = null;
+
+// ── MAP INIT ──
+function initMap() {
+  map = L.map('map', {
+    center: NEIGHBORHOOD_CENTER,
+    zoom: NEIGHBORHOOD_ZOOM,
+    zoomControl: true
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Add neighborhood boundary hint
+  L.circle(NEIGHBORHOOD_CENTER, {
+    radius: 400,
+    color: 'rgba(255,107,0,0.4)',
+    fillColor: 'rgba(255,107,0,0.05)',
+    fillOpacity: 1,
+    weight: 1.5,
+    dashArray: '6,6'
+  }).addTo(map);
+
+  // Neighborhood label (floating text)
+  L.marker([NEIGHBORHOOD_CENTER[0] + 0.0008, NEIGHBORHOOD_CENTER[1]], {
+    icon: L.divIcon({
+      className: '',
+      html: '<div style="font-family:Creepster,cursive;color:#FF6B00;font-size:14px;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,0.8);white-space:nowrap;transform:translateX(-50%)">👻 Heritage Pointe</div>',
+      iconSize: [0, 0]
+    }),
+    interactive: false
+  }).addTo(map);
+
+  // Starting point — 15 Heritage Pointe Pkwy (HOA)
+  const hoaIcon = L.divIcon({
+    className: '',
+    html: `<div style="
+      display:flex;align-items:center;justify-content:center;
+      width:42px;height:42px;border-radius:50%;
+      background:linear-gradient(135deg,#FFD700,#FF8C00);
+      border:3px solid #fff;font-size:20px;
+      box-shadow:0 0 20px rgba(255,215,0,0.7),0 2px 10px rgba(0,0,0,0.5);">🏠</div>`,
+    iconSize: [42, 42],
+    iconAnchor: [21, 21]
+  });
+  L.marker(NEIGHBORHOOD_CENTER, { icon: hoaIcon })
+    .addTo(map)
+    .bindPopup(`<div style="font-family:Nunito,sans-serif;color:#F0E6FF;padding:4px;">
+      <div style="font-weight:900;font-size:14px;margin-bottom:4px;">📍 Starting Point</div>
+      <div style="font-size:13px;color:#C8A8FF;">15 Heritage Pointe Pkwy</div>
+      <div style="font-size:11px;color:#9B87C0;margin-top:2px;">Senoia, GA 30276</div>
+    </div>`);
+}
+
+// ── GEOCODE using Nominatim (free, no key required) ──
+async function geocode(address) {
+  const full = `${address}, Senoia, GA 30276, USA`;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}&limit=1`;
+  try {
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+  } catch(e) {}
+  // Fallback: scatter near center
+  return {
+    lat: NEIGHBORHOOD_CENTER[0] + (Math.random() - 0.5) * 0.003,
+    lng: NEIGHBORHOOD_CENTER[1] + (Math.random() - 0.5) * 0.003
+  };
+}
+
+// ── MARKER ──
+function addMarker(house) {
+  if (markers[house.id]) {
+    markers[house.id].remove();
+  }
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="house-marker" style="animation-delay:0s">${house.offers?.includes('haunted') ? '👻' : '🎃'}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18]
+  });
+
+  const pips = Array.from({length:5}, (_,i) =>
+    `<div class="popup-pip ${i < house.generosity ? 'on' : ''}"></div>`).join('');
+
+  const tags = (house.offers || []).map(o =>
+    `<span class="popup-tag">${TREAT_LABELS[o] || o}</span>`).join('');
+
+  const popup = L.popup({ className: 'dark-popup', maxWidth: 240 }).setContent(`
+    <div style="font-family:Nunito,sans-serif;color:#F0E6FF;padding:4px">
+      <div class="popup-address">🏠 ${house.address}</div>
+      ${house.name ? `<div class="popup-name">${house.name}</div>` : ''}
+      <div class="popup-pips">${pips}</div>
+      <div class="popup-tags">${tags}</div>
+      ${house.hours ? `<div class="popup-hours">⏰ ${house.hours}</div>` : ''}
+      ${house.notes ? `<div class="popup-notes">${house.notes}</div>` : ''}
+    </div>
+  `);
+
+  const lat = house.lat || NEIGHBORHOOD_CENTER[0];
+  const lng = house.lng || NEIGHBORHOOD_CENTER[1];
+  const marker = L.marker([lat, lng], { icon }).addTo(map).bindPopup(popup);
+
+  marker.on('click', () => {
+    highlightCard(house.id);
+  });
+
+  markers[house.id] = marker;
+}
+
+// ── API ──
+async function fetchHouses() {
+  try {
+    const res = await fetch(`${API_BASE}/houses`);
+    if (!res.ok) throw new Error('API error');
+    return await res.json();
+  } catch(e) {
+    // Dev fallback — use localStorage if API not deployed yet
+    console.warn('API unavailable, using localStorage fallback');
+    const raw = localStorage.getItem('hauntYourHood_dev');
+    return raw ? JSON.parse(raw) : [];
+  }
+}
+
+async function createHouse(payload) {
+  try {
+    const res = await fetch(`${API_BASE}/houses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('API error');
+    return await res.json();
+  } catch(e) {
+    // Dev fallback
+    console.warn('API unavailable, using localStorage fallback');
+    const h = { ...payload, id: `local_${Date.now()}`, createdAt: new Date().toISOString() };
+    const arr = JSON.parse(localStorage.getItem('hauntYourHood_dev') || '[]');
+    arr.unshift(h);
+    localStorage.setItem('hauntYourHood_dev', JSON.stringify(arr));
+    return h;
+  }
+}
+
+async function deleteHouseApi(id) {
+  try {
+    const res = await fetch(`${API_BASE}/houses/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('API error');
+  } catch(e) {
+    const arr = JSON.parse(localStorage.getItem('hauntYourHood_dev') || '[]');
+    localStorage.setItem('hauntYourHood_dev', JSON.stringify(arr.filter(h => h.id !== id)));
+  }
+}
+
+// ── RENDER ──
+function renderList() {
+  const list = document.getElementById('houseList');
+  let filtered = houses;
+  if (activeFilter !== 'all') {
+    filtered = houses.filter(h => (h.offers || []).includes(activeFilter));
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="icon">👻</div>
+      <p>${activeFilter === 'all' ? 'No houses yet!' : 'None match this filter.'}</p>
+      <small>${activeFilter === 'all' ? 'Be the first to add yours ↗' : 'Try a different filter'}</small>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map((h, i) => {
+    const pips = Array.from({length:5}, (_,idx) =>
+      `<span class="pip ${idx < h.generosity ? 'on' : ''}"></span>`).join('');
+
+    const tags = (h.offers || []).slice(0,4).map(o =>
+      `<span class="card-tag ${o==='fullsize'||o==='haunted' ? 'highlight' : ''}">${TREAT_LABELS[o]||o}</span>`).join('');
+
+    return `<div class="house-card ${activeCardId === h.id ? 'active' : ''}" 
+      id="card-${h.id}" 
+      onclick="focusHouse('${h.id}')"
+      style="animation-delay:${i*0.04}s">
+      <button class="delete-btn" onclick="deleteHouse(event,'${h.id}')">✕</button>
+      <div class="card-row1">
+        <div class="card-address">🏠 ${h.address}</div>
+      </div>
+      ${h.name ? `<div class="card-name">${h.name}</div>` : ''}
+      <div class="card-tags">${tags}</div>
+      <div class="card-footer">
+        <div class="candy-pips">${pips}</div>
+        ${h.hours ? `<div class="card-hours">⏰ ${h.hours}</div>` : ''}
+      </div>
+      ${h.notes ? `<div class="card-notes">${h.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = houses.length;
+  document.getElementById('statCandy').textContent = houses.filter(h => (h.offers||[]).some(o => o==='candy'||o==='fullsize')).length;
+  document.getElementById('statHaunted').textContent = houses.filter(h => (h.offers||[]).includes('haunted')).length;
+}
+
+// ── ACTIONS ──
+function focusHouse(id) {
+  activeCardId = id;
+  renderList();
+  const house = houses.find(h => h.id == id);
+  if (house && markers[id]) {
+    map.flyTo([house.lat || NEIGHBORHOOD_CENTER[0], house.lng || NEIGHBORHOOD_CENTER[1]], 18, { duration: 0.8 });
+    markers[id].openPopup();
+  }
+  // Scroll card into view
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function highlightCard(id) {
+  activeCardId = id;
+  renderList();
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function deleteHouse(e, id) {
+  e.stopPropagation();
+  if (!confirm('Remove this house?')) return;
+  await deleteHouseApi(id);
+  if (markers[id]) { markers[id].remove(); delete markers[id]; }
+  houses = houses.filter(h => h.id != id);
+  renderList();
+  updateStats();
+  showToast('House removed', false);
+}
+
+function setFilter(val, btn) {
+  activeFilter = val;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+// ── MODAL ──
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('f-address').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+document.querySelectorAll('#treatTagsInput .treat-tag').forEach(btn => {
+  btn.addEventListener('click', () => btn.classList.toggle('active'));
+});
+
+function getSelectedOffers() {
+  return [...document.querySelectorAll('#treatTagsInput .treat-tag.active')].map(b => b.dataset.val);
+}
+
+async function submitHouse() {
+  const address = document.getElementById('f-address').value.trim();
+  if (!address) {
+    document.getElementById('f-address').style.borderColor = 'var(--red)';
+    setTimeout(() => document.getElementById('f-address').style.borderColor = '', 1500);
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span>Summoning your house...</span><span>⌛</span>';
+
+  try {
+    const coords = await geocode(address);
+    const payload = {
+      address,
+      name: document.getElementById('f-name').value.trim(),
+      generosity: parseInt(document.getElementById('f-generosity').value),
+      hours: document.getElementById('f-hours').value.trim(),
+      offers: getSelectedOffers(),
+      notes: document.getElementById('f-notes').value.trim(),
+      lat: coords.lat,
+      lng: coords.lng,
+      neighborhood: 'Heritage Pointe',
+      city: 'Senoia',
+      state: 'GA'
+    };
+
+    const saved = await createHouse(payload);
+    houses.unshift(saved);
+    addMarker(saved);
+    map.flyTo([saved.lat, saved.lng], 18, { duration: 1 });
+    renderList();
+    updateStats();
+    closeModal();
+    showToast('🎃 Your house is on the map!', false);
+
+    // Reset form
+    document.getElementById('f-address').value = '';
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-generosity').value = '3';
+    document.getElementById('f-hours').value = '';
+    document.getElementById('f-notes').value = '';
+    document.querySelectorAll('#treatTagsInput .treat-tag').forEach(b => b.classList.remove('active'));
+
+  } catch(e) {
+    showToast('Error adding house. Try again.', true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>Add to the Map</span><span>🎃</span>';
+  }
+}
+
+// ── TOAST ──
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast${isError ? ' error' : ''}`;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── INIT ──
+async function init() {
+  initMap();
+  const data = await fetchHouses();
+  houses = data;
+  houses.forEach(h => addMarker(h));
+  renderList();
+  updateStats();
+
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }, 800);
+}
+
+init();
+</script>
+</body>
+</html>
