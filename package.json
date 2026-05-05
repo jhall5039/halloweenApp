@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Halloween neighborhood map app for Heritage Pointe, Senoia GA",
   "scripts": {
-    "start": "npx serve -l 3131 ."
+    "start": "serve -s . -l 8080"
   },
   "dependencies": {
     "@azure/cosmos": "^4.0.0",
