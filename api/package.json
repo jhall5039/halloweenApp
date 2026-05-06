@@ -1,0 +1,17 @@
+{
+  "name": "haunt-your-hood-api",
+  "version": "1.0.0",
+  "description": "Haunt Your Hood — Azure Functions API",
+  "main": "houses-api.js",
+  "scripts": {
+    "start": "func start",
+    "build": "echo 'No build step required for JS'"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "@azure/cosmos": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
