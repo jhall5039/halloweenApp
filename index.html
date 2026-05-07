@@ -773,7 +773,7 @@
 // ─────────────────────────────────────────────
 //  CONFIG — Update API_BASE after deploying Azure Functions
 // ─────────────────────────────────────────────
-const API_BASE = window.HALLOWEEN_API_URL || 'https://halloweenapp-func-axhydhezhsdqfzdn.centralus-01.azurewebsites.net/api';
+const API_BASE = window.HALLOWEEN_API_URL || '/api';
 
 const TREAT_LABELS = {
   candy:       '🍬 Candy',
@@ -913,7 +913,7 @@ async function fetchHouses() {
     if (!res.ok) throw new Error('API error');
     return await res.json();
   } catch(e) {
-    showToast(`API error: ${e.message}`, true);
+    console.warn('API unavailable, using localStorage fallback', e);
     const raw = localStorage.getItem('hauntYourHood_dev');
     return raw ? JSON.parse(raw) : [];
   }
