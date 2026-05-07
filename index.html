@@ -913,8 +913,7 @@ async function fetchHouses() {
     if (!res.ok) throw new Error('API error');
     return await res.json();
   } catch(e) {
-    // Dev fallback — use localStorage if API not deployed yet
-    console.warn('API unavailable, using localStorage fallback');
+    showToast(`API error: ${e.message}`, true);
     const raw = localStorage.getItem('hauntYourHood_dev');
     return raw ? JSON.parse(raw) : [];
   }
