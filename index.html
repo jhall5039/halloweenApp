@@ -463,6 +463,13 @@
   .treat-tag:hover { border-color: var(--orange); color: var(--orange); }
   .treat-tag.active { background: rgba(255,107,0,0.15); border-color: var(--orange); color: var(--orange); }
 
+  .hours-range { display: flex; gap: 8px; align-items: center; }
+  .hours-range select { flex: 1; }
+  .hours-range span { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+  .treat-custom { display: none; margin-top: 8px; }
+  .treat-custom input { width: 100%; box-sizing: border-box; }
+
   .map-hint {
     background: rgba(255,107,0,0.08);
     border: 1px solid rgba(255,107,0,0.2);
@@ -729,7 +736,37 @@
       </div>
       <div class="form-group">
         <label>Trick-or-Treat Hours</label>
-        <input type="text" id="f-hours" placeholder="e.g. 6–9 PM" />
+        <div class="hours-range">
+          <select id="f-hours-start">
+            <option value="">Start</option>
+            <option value="5:00 PM">5:00 PM</option>
+            <option value="5:30 PM">5:30 PM</option>
+            <option value="6:00 PM" selected>6:00 PM</option>
+            <option value="6:30 PM">6:30 PM</option>
+            <option value="7:00 PM">7:00 PM</option>
+            <option value="7:30 PM">7:30 PM</option>
+            <option value="8:00 PM">8:00 PM</option>
+            <option value="8:30 PM">8:30 PM</option>
+            <option value="9:00 PM">9:00 PM</option>
+            <option value="9:30 PM">9:30 PM</option>
+            <option value="10:00 PM">10:00 PM</option>
+          </select>
+          <span>to</span>
+          <select id="f-hours-end">
+            <option value="">End</option>
+            <option value="5:00 PM">5:00 PM</option>
+            <option value="5:30 PM">5:30 PM</option>
+            <option value="6:00 PM">6:00 PM</option>
+            <option value="6:30 PM">6:30 PM</option>
+            <option value="7:00 PM">7:00 PM</option>
+            <option value="7:30 PM">7:30 PM</option>
+            <option value="8:00 PM">8:00 PM</option>
+            <option value="8:30 PM">8:30 PM</option>
+            <option value="9:00 PM" selected>9:00 PM</option>
+            <option value="9:30 PM">9:30 PM</option>
+            <option value="10:00 PM">10:00 PM</option>
+          </select>
+        </div>
       </div>
       <div class="form-group full">
         <label>Candy Generosity</label>
@@ -754,6 +791,14 @@
           <button class="treat-tag" data-val="firepits">🔥 Fire Pit</button>
           <button class="treat-tag" data-val="games">🎮 Games</button>
           <button class="treat-tag" data-val="nonfood">🩺 Allergy-Safe</button>
+          <button class="treat-tag" data-val="food">🍕 Food</button>
+          <button class="treat-tag" data-val="other">⭐ Other</button>
+        </div>
+        <div class="treat-custom" id="food-custom">
+          <input type="text" id="f-food-note" placeholder="What food? (e.g. hot dogs, chili)" />
+        </div>
+        <div class="treat-custom" id="other-custom">
+          <input type="text" id="f-other-note" placeholder="What else? (e.g. face painting, glow sticks)" />
         </div>
       </div>
       <div class="form-group full">
@@ -785,7 +830,9 @@ const TREAT_LABELS = {
   haunted:     '👻 Haunted',
   firepits:    '🔥 Fire Pit',
   games:       '🎮 Games',
-  nonfood:     '🩺 Allergy-Safe'
+  nonfood:     '🩺 Allergy-Safe',
+  food:        '🍕 Food',
+  other:       '⭐ Other'
 };
 
 // 15 Heritage Pointe Pkwy, Senoia GA 30276 — neighborhood starting point
@@ -881,8 +928,11 @@ function addMarker(house) {
   const pips = Array.from({length:5}, (_,i) =>
     `<div class="popup-pip ${i < house.generosity ? 'on' : ''}"></div>`).join('');
 
-  const tags = (house.offers || []).map(o =>
-    `<span class="popup-tag">${TREAT_LABELS[o] || o}</span>`).join('');
+  const tags = (house.offers || []).map(o => {
+    if (o === 'food' && house.foodNote) return `<span class="popup-tag">🍕 ${house.foodNote}</span>`;
+    if (o === 'other' && house.otherNote) return `<span class="popup-tag">⭐ ${house.otherNote}</span>`;
+    return `<span class="popup-tag">${TREAT_LABELS[o] || o}</span>`;
+  }).join('');
 
   const popup = L.popup({ className: 'dark-popup', maxWidth: 240 }).setContent(`
     <div style="font-family:Nunito,sans-serif;color:#F0E6FF;padding:4px">
@@ -970,8 +1020,11 @@ function renderList() {
     const pips = Array.from({length:5}, (_,idx) =>
       `<span class="pip ${idx < h.generosity ? 'on' : ''}"></span>`).join('');
 
-    const tags = (h.offers || []).slice(0,4).map(o =>
-      `<span class="card-tag ${o==='fullsize'||o==='haunted' ? 'highlight' : ''}">${TREAT_LABELS[o]||o}</span>`).join('');
+    const tags = (h.offers || []).slice(0,4).map(o => {
+      if (o === 'food' && h.foodNote) return `<span class="card-tag">${'🍕 ' + h.foodNote}</span>`;
+      if (o === 'other' && h.otherNote) return `<span class="card-tag">${'⭐ ' + h.otherNote}</span>`;
+      return `<span class="card-tag ${o==='fullsize'||o==='haunted' ? 'highlight' : ''}">${TREAT_LABELS[o]||o}</span>`;
+    }).join('');
 
     return `<div class="house-card ${activeCardId === h.id ? 'active' : ''}" 
       id="card-${h.id}" 
@@ -1052,7 +1105,12 @@ function handleOverlayClick(e) {
 }
 
 document.querySelectorAll('#treatTagsInput .treat-tag').forEach(btn => {
-  btn.addEventListener('click', () => btn.classList.toggle('active'));
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('active');
+    const val = btn.dataset.val;
+    if (val === 'food') document.getElementById('food-custom').style.display = btn.classList.contains('active') ? 'block' : 'none';
+    if (val === 'other') document.getElementById('other-custom').style.display = btn.classList.contains('active') ? 'block' : 'none';
+  });
 });
 
 function getSelectedOffers() {
@@ -1077,8 +1135,10 @@ async function submitHouse() {
       address,
       name: document.getElementById('f-name').value.trim(),
       generosity: parseInt(document.getElementById('f-generosity').value),
-      hours: document.getElementById('f-hours').value.trim(),
+      hours: (() => { const s = document.getElementById('f-hours-start').value, e = document.getElementById('f-hours-end').value; return s && e ? `${s} – ${e}` : s || e || ''; })(),
       offers: getSelectedOffers(),
+      foodNote: document.getElementById('f-food-note').value.trim(),
+      otherNote: document.getElementById('f-other-note').value.trim(),
       notes: document.getElementById('f-notes').value.trim(),
       lat: coords.lat,
       lng: coords.lng,
@@ -1100,8 +1160,13 @@ async function submitHouse() {
     document.getElementById('f-address').value = '';
     document.getElementById('f-name').value = '';
     document.getElementById('f-generosity').value = '3';
-    document.getElementById('f-hours').value = '';
+    document.getElementById('f-hours-start').value = '6:00 PM';
+    document.getElementById('f-hours-end').value = '9:00 PM';
     document.getElementById('f-notes').value = '';
+    document.getElementById('f-food-note').value = '';
+    document.getElementById('f-other-note').value = '';
+    document.getElementById('food-custom').style.display = 'none';
+    document.getElementById('other-custom').style.display = 'none';
     document.querySelectorAll('#treatTagsInput .treat-tag').forEach(b => b.classList.remove('active'));
 
   } catch(e) {
