@@ -94,6 +94,8 @@ app.http('createHouse', {
         generosity:   Math.min(5, Math.max(1, parseInt(body.generosity) || 3)),
         hours:        (body.hours      || '').trim().substring(0, 50),
         offers:       Array.isArray(body.offers) ? body.offers.filter(o => typeof o === 'string').slice(0, 10) : [],
+        foodNote:     (body.foodNote   || '').trim().substring(0, 100),
+        otherNote:    (body.otherNote  || '').trim().substring(0, 100),
         notes:        (body.notes      || '').trim().substring(0, 300),
         lat:          typeof body.lat === 'number' ? body.lat : null,
         lng:          typeof body.lng === 'number' ? body.lng : null,
