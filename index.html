@@ -659,9 +659,11 @@
 
   /* Small phone (<480px) */
   @media (max-width: 480px) {
+    .topbar { height: auto; min-height: 56px; padding: 8px 12px; }
     .topbar-brand h1 { font-size: 20px; letter-spacing: 1px; }
     .topbar-brand .pumpkin { font-size: 22px; }
-    .btn-add-house { font-size: 12px; padding: 7px 12px; }
+    .topbar-brand .sub { display: none; }
+    .btn-add-house { font-size: 12px; padding: 7px 12px; white-space: nowrap; }
     .topbar-stats { display: none; }
   }
 
